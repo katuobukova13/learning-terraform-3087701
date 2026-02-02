@@ -32,19 +32,6 @@ module "web_vpc" {
   }
 }
 
-resource "aws_instance" "web" {
-  ami           = data.aws_ami.app_ami.id
-  instance_type = var.instance_type
-
-  vpc_security_group_ids = [module.web_sg.security_group_id]
-
-  subnet_id = module.web_vpc.public_subnets[0]
-
-  tags = {
-    Name = "HelloWorld"
-  }
-}
-
 module "web_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.1"
@@ -94,4 +81,29 @@ resource "aws_lb_target_group_attachment" "web" {
   target_group_arn = aws_lb_target_group.web.arn
   target_id        = aws_instance.web.id
   port             = 80
+}
+
+module "web_autoscaling" {
+  source  = "terraform-aws-modules/autoscaling/aws"
+  version = "9.1.0"
+
+  name = "web"
+
+  min_size = 1
+  max_size = 2
+
+  vpc_zone_identifier = module.web_vpc.public_subnets
+
+  launch_template_name = "web"
+
+  security_groups = [module.web_sg.security_group_id]
+  instance_type   = var.instance_type
+
+  image_id = data.aws_ami.app_ami.id
+
+  traffic_source_attachments = {
+    web-alb {
+      traffic_source_identifier = aws_lb_target_group.web.arn
+    }
+  }
 }
