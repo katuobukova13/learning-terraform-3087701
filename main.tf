@@ -58,3 +58,40 @@ module "web_sg" {
   egress_rules       = ["all-all"]
   egress_cidr_blocks = ["0.0.0.0/0"]
 }
+
+module "web_alb" {
+  source = "terraform-aws-modules/alb/aws"
+
+  name    = "web-alb"
+  vpc_id  = module.web_vpc.vpc_id
+  subnets = module.web_vpc.public_subnets
+
+  security_groups = [module.web_sg.security_group_id]
+
+  listeners = {
+    web-http = {
+      port     = 80
+      protocol = "HTTP"
+      forward = {
+        target_group_arn = aws_lb_target_group.web.arn
+      }
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+}
+
+resource "aws_lb_target_group" "web" {
+  name     = "web"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = module.web_vpc.vpc_id
+}
+
+resource "aws_lb_target_group_attachment" "web" {
+  target_group_arn = aws_lb_target_group.web.arn
+  target_id        = aws_instance.web.id
+  port             = 80
+}
