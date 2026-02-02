@@ -77,12 +77,6 @@ resource "aws_lb_target_group" "web" {
   vpc_id   = module.web_vpc.vpc_id
 }
 
-resource "aws_lb_target_group_attachment" "web" {
-  target_group_arn = aws_lb_target_group.web.arn
-  target_id        = aws_instance.web.id
-  port             = 80
-}
-
 module "web_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.1.0"
@@ -102,7 +96,7 @@ module "web_autoscaling" {
   image_id = data.aws_ami.app_ami.id
 
   traffic_source_attachments = {
-    web-alb {
+    web-alb = {
       traffic_source_identifier = aws_lb_target_group.web.arn
     }
   }
