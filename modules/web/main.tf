@@ -35,7 +35,7 @@ module "web_vpc" {
 module "web_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.1"
-  name    = "web"
+  name    = "${var.environment.name}-web"
 
   vpc_id = module.web_vpc.vpc_id
   
@@ -49,7 +49,7 @@ module "web_sg" {
 module "web_alb" {
   source = "terraform-aws-modules/alb/aws"
 
-  name    = "web-alb"
+  name    = "${var.environment.name}-web-alb"
   vpc_id  = module.web_vpc.vpc_id
   subnets = module.web_vpc.public_subnets
 
@@ -71,7 +71,7 @@ module "web_alb" {
 }
 
 resource "aws_lb_target_group" "web" {
-  name     = "web"
+  name     = "${var.environment.name}-web"
   port     = 80
   protocol = "HTTP"
   vpc_id   = module.web_vpc.vpc_id
@@ -81,14 +81,14 @@ module "web_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.1.0"
 
-  name = "web"
+  name = "${var.environment.name}-web"
 
   min_size = var.asg_min
   max_size = var.asg_max
 
   vpc_zone_identifier = module.web_vpc.public_subnets
 
-  launch_template_name = "web"
+  launch_template_name = "${var.environment.name}-web"
 
   security_groups = [module.web_sg.security_group_id]
   instance_type   = var.instance_type
@@ -96,7 +96,7 @@ module "web_autoscaling" {
   image_id = data.aws_ami.app_ami.id
 
   traffic_source_attachments = {
-    web-alb = {
+    ${var.environment.name}-web-alb = {
       traffic_source_identifier = aws_lb_target_group.web.arn
     }
   }
